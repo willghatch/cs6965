@@ -1,0 +1,106 @@
+#lang racket/base
+
+(require racket/string)
+(require racket/set)
+
+(struct sudoku-board
+  (M N rows)
+  #:transparent)
+
+(define (empty-sudoku-board m n)
+  (let* ([mn (* m n)]
+         [empty-row (for/hash ([i (in-range mn)])
+                      (values i 'blank))]
+         [rows (for/hash ([i (in-range mn)])
+                 (values i empty-row))])
+    (sudoku-board m n rows)))
+
+(define (set-sudoku-cell b x y val)
+  (let* ([rows (sudoku-board-rows b)]
+         [row (hash-ref rows y)]
+         [nrow (hash-set row x val)]
+         [nrows (hash-set rows y nrow)])
+    (struct-copy sudoku-board b [rows nrows])))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (string->board s)
+  (define lines
+    (for/list ([line (string-split s "\n")])
+      (string-split line)))
+  ;; TODO - handle errors
+  (define m (string->number (caar lines)))
+  (define n (string->number (cadar lines)))
+  (define data (list->vector (map list->vector (cdr lines))))
+  (for*/fold ([board (empty-sudoku-board m n)])
+             ([x (in-range (* m n))]
+              [y (in-range (* m n))])
+    (let ((v (vector-ref (vector-ref data y) x)))
+      (if (equal? v "_")
+          board
+          (set-sudoku-cell board x y (string->number v))))))
+
+(module+ test
+  (require rackunit)
+  (check-equal? (string->board "2 1\n1 _\n2 _")
+                (set-sudoku-cell (set-sudoku-cell (empty-sudoku-board 2 1) 0 1 2) 0 0 1)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; projectors
+
+(define (get-sudoku-cell board x y)
+  (hash-ref (hash-ref (sudoku-board-rows board) y) x))
+
+(define (get-peer-group-cells board x y)
+  ;; m is the number of columns in a sub-board
+  ;; n is the number of rows in a sub-board
+  (let* ([m (sudoku-board-M board)]
+         [n (sudoku-board-N board)]
+         [px (quotient x m)]
+         [py (quotient y n)])
+    (for*/list ([cx (in-range px (+ px m))]
+                [cy (in-range py (+ py n))])
+      (get-sudoku-cell board cx cy))))
+
+(define (get-row-cells board y)
+  (hash-values (hash-ref (sudoku-board-rows board) y)))
+
+(define (get-column-cells board x)
+  (for/list ([y (in-range 0 (* (sudoku-board-N board)
+                               (sudoku-board-M board)))])
+    (get-sudoku-cell board x y)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; validators
+
+(define (valid-group? g)
+  ;; a group will be a list of m*n values
+  (foldl (λ (v s) (cond [(not s) #f]
+                        [(equal? v 'blank) s]
+                        [(set-member? s v) #f]
+                        [else (set-add s v)]))
+         (set)
+         g))
+
+(define (valid-board-row? b y)
+  (valid-group? (get-row-cells b y)))
+(define (valid-board-column? b x)
+  (valid-group? (get-column-cells b x)))
+(define (valid-peer-group? b x y)
+  (valid-group? (get-peer-group-cells b x y)))
+
+(define (valid-board? b)
+  (let* ([m (sudoku-board-M b)]
+         [n (sudoku-board-N b)]
+         [mn (* m n)])
+    (and
+     ;; rows have unique cells
+     (for/and ([i (in-range mn)])
+       (valid-board-row? b i))
+     ;; columns have unique cells
+     (for/and ([i (in-range mn)])
+       (valid-board-column? b i))
+     ;; sub-boards have unique cells
+     ;; m is the number of columns in a sub-board
+     ;; n is the number of rows in a sub-board
+     (for/and ([i m])
+       (for/and ([j n])
+         (valid-peer-group? b (* j m) (* i n)))))))
