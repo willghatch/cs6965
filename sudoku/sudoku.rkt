@@ -46,6 +46,38 @@
   (check-equal? (string->board "2 1\n1 _\n2 _")
                 (set-sudoku-cell (set-sudoku-cell (empty-sudoku-board 2 1) 0 1 2) 0 0 1)))
 
+(define (board->string b #:extra-space? [extra-space? #f])
+  (let* ([m (sudoku-board-M b)]
+         [n (sudoku-board-N b)]
+         [mn (* m n)])
+    (string-append
+     (format "~a ~a~n" m n)
+     (if extra-space? "\n" "")
+     (apply
+      string-append
+      (for*/list ([y (in-range mn)]
+                  [x (in-range mn)])
+        (string-append
+         (let ([cell (get-sudoku-cell b x y)])
+           (if (number? cell)
+               (number->string cell)
+               "_"))
+         (if (not (equal? x (sub1 mn))) " " "")
+         ;; print an extra space between groups
+         (if (and extra-space?
+                  (equal? (sub1 m) (modulo x m))
+                  (not (equal? x (sub1 mn))))
+             " "
+             "")
+         (if (and (equal? x (sub1 mn)) (not (equal? y (sub1 mn))))
+             ;; extra vertical space between groups
+             (if (and extra-space? (equal? (sub1 n) (modulo y n)))
+                 "\n\n"
+                 "\n")
+             "")
+         )))
+     "\n")))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; projectors
 
 (define (get-sudoku-cell board x y)
@@ -112,9 +144,9 @@
 
 
 (module+ test
-  (define bad-board
-    (string->board #<<EOB
+  (define bad-board-string #<<EOB
 3 3
+
 _ _ _  _ _ _  1 _ _
 _ _ _  1 1 _  3 _ _
 _ _ _  _ 1 _  2 _ _
@@ -126,11 +158,12 @@ _ _ _  _ _ _  6 _ _
 _ _ _  _ _ _  4 _ _
 _ _ _  _ _ _  8 _ _
 _ _ _  _ _ _  9 _ _
+
 EOB
-))
-  (define good-board
-    (string->board #<<EOB
+)
+  (define good-board-string #<<EOB
 3 3
+
 _ _ _  _ _ _  1 _ _
 _ _ _  _ _ _  3 _ _
 _ _ _  _ _ _  2 _ _
@@ -142,8 +175,12 @@ _ _ _  _ _ _  6 _ _
 _ _ _  _ _ _  4 _ _
 _ _ _  _ _ _  8 _ _
 _ _ _  _ _ _  9 _ _
+
 EOB
-))
+)
+  (define bad-board (string->board bad-board-string))
+  (define good-board (string->board good-board-string))
+  (check-equal? bad-board-string (board->string bad-board #:extra-space? #t))
   (check-false (valid-board-row? bad-board 1))
   (check-false (valid-board-column? bad-board 4))
   (check-false (valid-peer-group? bad-board 3 0))
@@ -195,6 +232,6 @@ EOB
 
 (module+ test
   (check-false (solve bad-board))
-  (println (solve good-board))
+  (printf "~a" (board->string (solve good-board) #:extra-space? #t))
 
   )
