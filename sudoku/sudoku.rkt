@@ -26,8 +26,9 @@
 
 (define (string->board s)
   (define lines
-    (for/list ([line (string-split s "\n")])
-      (string-split line)))
+    (filter (λ (l) (not (null? l)))
+            (for/list ([line (string-split s "\n")])
+              (string-split line))))
   ;; TODO - handle errors
   (define m (string->number (caar lines)))
   (define n (string->number (cadar lines)))
@@ -55,8 +56,9 @@
   ;; n is the number of rows in a sub-board
   (let* ([m (sudoku-board-M board)]
          [n (sudoku-board-N board)]
-         [px (quotient x m)]
-         [py (quotient y n)])
+         ;; start of peer group ranges
+         [px (* m (quotient x m))]
+         [py (* n (quotient y n))])
     (for*/list ([cx (in-range px (+ px m))]
                 [cy (in-range py (+ py n))])
       (get-sudoku-cell board cx cy))))
@@ -79,6 +81,9 @@
                         [else (set-add s v)]))
          (set)
          g))
+(module+ test
+  (check-not-false (valid-group? '(1  3  5)))
+  (check-false (valid-group? '(1 5 5))))
 
 (define (valid-board-row? b y)
   (valid-group? (get-row-cells b y)))
@@ -104,3 +109,47 @@
      (for/and ([i m])
        (for/and ([j n])
          (valid-peer-group? b (* j m) (* i n)))))))
+
+
+(module+ test
+  (define bad-board
+    (string->board #<<EOB
+3 3
+_ _ _  _ _ _  1 _ _
+_ _ _  1 1 _  3 _ _
+_ _ _  _ 1 _  2 _ _
+
+_ _ _  _ _ _  5 _ _
+_ _ _  _ _ _  6 _ _
+1 2 3  4 5 6  7 8 9
+
+_ _ _  _ _ _  4 _ _
+_ _ _  _ _ _  8 _ _
+_ _ _  _ _ _  9 _ _
+EOB
+))
+  (define good-board
+    (string->board #<<EOB
+3 3
+_ _ _  _ _ _  1 _ _
+_ _ _  _ _ _  3 _ _
+_ _ _  _ _ _  2 _ _
+
+_ _ _  _ _ _  5 _ _
+_ _ _  _ _ _  6 _ _
+1 2 3  4 5 6  7 8 9
+
+_ _ _  _ _ _  4 _ _
+_ _ _  _ _ _  8 _ _
+_ _ _  _ _ _  9 _ _
+EOB
+))
+  (check-false (valid-board-row? bad-board 1))
+  (check-false (valid-board-column? bad-board 4))
+  (check-false (valid-peer-group? bad-board 3 0))
+  (check-not-false (valid-board-row? bad-board 5))
+  (check-not-false (valid-board-column? bad-board 6))
+  (check-not-false (valid-peer-group? bad-board 6 5))
+  (check-false (valid-board? bad-board))
+  (check-not-false (valid-board? good-board))
+  )
