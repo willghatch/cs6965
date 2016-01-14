@@ -232,6 +232,37 @@ EOB
 
 (module+ test
   (check-false (solve bad-board))
-  (printf "~a" (board->string (solve good-board) #:extra-space? #t))
+
+  (define test-1-string #<<EOB
+3 3
+_ 5 _ _ 6 _ _ _ 1
+_ _ 4 8 _ _ _ 7 _
+8 _ _ _ _ _ _ 5 2
+2 _ _ _ 5 7 _ 3 _
+_ _ _ _ _ _ _ _ _
+_ 3 _ 6 9 _ _ _ 5
+7 9 _ _ _ _ _ _ 8
+_ 1 _ _ _ 6 5 _ _
+5 _ _ _ 3 _ _ 6 _
+
+EOB
+    )
+  (define test-1-solution-string #<<EOB
+3 3
+9 5 3 7 6 2 8 4 1
+6 2 4 8 1 5 9 7 3
+8 7 1 3 4 9 6 5 2
+2 8 9 4 5 7 1 3 6
+1 6 5 2 8 3 4 9 7
+4 3 7 6 9 1 2 8 5
+7 9 6 5 2 4 3 1 8
+3 1 8 9 7 6 5 2 4
+5 4 2 1 3 8 7 6 9
+
+EOB
+    )
+  (define test-1 (string->board test-1-string))
+  (check-equal? (solve test-1) (string->board test-1-solution-string))
+
 
   )
