@@ -153,3 +153,48 @@ EOB
   (check-false (valid-board? bad-board))
   (check-not-false (valid-board? good-board))
   )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (get-board-potential-values b)
+  (list->set (in-range 1 (add1 (* (sudoku-board-M b) (sudoku-board-N b))))))
+
+(define (get-cell-potential-values b x y)
+  (let ([rcs (get-row-cells b y)]
+        [ccs (get-column-cells b x)]
+        [pcs (get-peer-group-cells b x y)])
+    (set-subtract (get-board-potential-values b)
+                  (list->set rcs)
+                  (list->set ccs)
+                  (list->set pcs))))
+
+(module+ test
+  (check-equal? (get-cell-potential-values good-board 8 3)
+                (set 1 2 3 4)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define (solve-rec b x y)
+  (let* ([m (sudoku-board-M b)]
+         [n (sudoku-board-N b)]
+         [mn (* m n)]
+         [cell (if (and (< x mn) (< y mn))
+                   (get-sudoku-cell b x y)
+                   'out-of-bounds)])
+    (cond [(>= x mn) (solve-rec b 0 (add1 y))]
+          [(>= y mn) b]
+          [(number? cell) (solve-rec b (add1 x) y)]
+          [(equal? cell 'blank)
+           (for/or ([p (get-cell-potential-values b x y)])
+             (solve-rec (set-sudoku-cell b x y p) (add1 x) y)
+             )
+           ])))
+(define (solve board)
+  (if (valid-board? board)
+      (solve-rec board 0 0)
+      #f))
+
+(module+ test
+  (check-false (solve bad-board))
+  (println (solve good-board))
+
+  )
