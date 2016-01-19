@@ -45,7 +45,7 @@
   (check-equal? (string->board "2 1\n1 _\n2 _")
                 (set-sudoku-cell (set-sudoku-cell (empty-sudoku-board 2 1) 0 1 2) 0 0 1)))
 
-(define (board->string b #:extra-space? [extra-space? #f])
+(define (board->string b #:extra-space? [extra-space? #t])
   (let* ([m (sudoku-board-M b)]
          [n (sudoku-board-N b)]
          [mn (* m n)])
@@ -275,23 +275,31 @@ EOB
   )
 
 
-(define (generate-board m n)
+(define (generate-board m n [fuel 500])
   (define mn (* m n))
-  (define (rec b)
-    (let* ([x (random mn)]
-           [y (random mn)]
-           [v (+ 1 (random mn))]
-           [nb (set-sudoku-cell b x y v)]
-           [valid? (valid-board? nb)]
-           [solution (and valid? (solve-unique nb))])
-      (cond
-        ;; if there is a unique solution, use the current board
-        [(sudoku-board? solution) nb]
-        ;; if there is no solution, try going forward with the last good board
-        [(not solution) (rec b)]
-        ;; there are multiple solutions still, so let's prune some more
-        [else (rec nb)])))
-  (rec (empty-sudoku-board m n)))
+  (define (rec b fuel)
+    (if (< fuel 0)
+        #f
+        (let* ([x (random mn)]
+               [y (random mn)]
+               [v-possible (get-cell-potential-values b x y)]
+               [v (if (set-empty? v-possible)
+                      ;; if nothing is possible, just choose 1 and it will later show its invalid, and use a fuel
+                      1
+                      (list-ref (set->list v-possible) (random (set-count v-possible))))]
+               [nb (set-sudoku-cell b x y v)]
+               [valid? (valid-board? nb)]
+               [solution (and valid? (solve-unique nb))])
+          (cond
+            ;; if there is a unique solution, use the current board
+            [(sudoku-board? solution) nb]
+            ;; if there is no solution, try going forward with the last good board
+            [(not solution) (rec b (- fuel 1))]
+            ;; there are multiple solutions still, so let's prune some more
+            [else (rec nb fuel)]))))
+
+  (or (rec (empty-sudoku-board m n) fuel)
+      (generate-board m n fuel)))
 
 (module+ main
   (let ([b (generate-board 3 3)])
