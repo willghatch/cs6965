@@ -210,28 +210,35 @@ EOB
                 (set 1 2 3 4)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define (solve-rec b x y)
+(define (solve-rec b x y n-max solutions-so-far)
   (let* ([m (sudoku-board-M b)]
          [n (sudoku-board-N b)]
          [mn (* m n)]
          [cell (if (and (< x mn) (< y mn))
                    (get-sudoku-cell b x y)
                    'out-of-bounds)])
-    (cond [(>= x mn) (solve-rec b 0 (add1 y))]
-          [(>= y mn) b]
-          [(number? cell) (solve-rec b (add1 x) y)]
+    (cond [(<= n-max (set-count solutions-so-far)) solutions-so-far]
+          [(>= x mn) (solve-rec b 0 (add1 y) n-max solutions-so-far)]
+          [(>= y mn) (set-add solutions-so-far b)]
+          [(number? cell) (solve-rec b (add1 x) y n-max solutions-so-far)]
           [(equal? cell 'blank)
-           (for/or ([p (get-cell-potential-values b x y)])
-             (solve-rec (set-sudoku-cell b x y p) (add1 x) y)
-             )
+           (for/fold ([solutions solutions-so-far])
+                     ([p (get-cell-potential-values b x y)])
+             (solve-rec (set-sudoku-cell b x y p) (add1 x) y n-max solutions))
            ])))
-(define (solve board)
+(define (solve board n-solutions)
+  ;; returns a set of solutions
   (if (valid-board? board)
-      (solve-rec board 0 0)
-      #f))
+      (solve-rec board 0 0 n-solutions (set))
+      (set)))
+(define (solve-unique board)
+  (let ((s (solve board 1)))
+    (cond [(set-empty? s) #f]
+          [(> (set-count s) 1) 'multiple]
+          [else (set-first s)])))
 
 (module+ test
-  (check-false (solve bad-board))
+  (check-false (solve-unique bad-board))
 
   (define test-1-string #<<EOB
 3 3
@@ -262,7 +269,10 @@ EOB
 EOB
     )
   (define test-1 (string->board test-1-string))
-  (check-equal? (solve test-1) (string->board test-1-solution-string))
+  (check-equal? (solve-unique test-1) (string->board test-1-solution-string))
+
+  (check-equal? (set-count (solve (string->board "1 2 \n _ _ \n _ _") +inf.f))
+                2)
 
 
   )
