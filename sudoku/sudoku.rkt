@@ -231,7 +231,7 @@ EOB
       (solve-rec board 0 0 n-solutions (set))
       (set)))
 (define (solve-unique board)
-  (let ((s (solve board 1)))
+  (let ((s (solve board 2)))
     (cond [(set-empty? s) #f]
           [(> (set-count s) 1) 'multiple]
           [else (set-first s)])))
@@ -272,6 +272,29 @@ EOB
 
   (check-equal? (set-count (solve (string->board "1 2 \n _ _ \n _ _") +inf.f))
                 2)
-
-
   )
+
+
+(define (generate-board m n)
+  (define mn (* m n))
+  (define (rec b)
+    (let* ([x (random mn)]
+           [y (random mn)]
+           [v (+ 1 (random mn))]
+           [nb (set-sudoku-cell b x y v)]
+           [valid? (valid-board? nb)]
+           [solution (and valid? (solve-unique nb))])
+      (cond
+        ;; if there is a unique solution, use the current board
+        [(sudoku-board? solution) nb]
+        ;; if there is no solution, try going forward with the last good board
+        [(not solution) (rec b)]
+        ;; there are multiple solutions still, so let's prune some more
+        [else (rec nb)])))
+  (rec (empty-sudoku-board m n)))
+
+(module+ main
+  (let ([b (generate-board 3 3)])
+    (printf "~a~n" (board->string b))
+    (printf "~a~n" (board->string (solve-unique b)))
+    ))
