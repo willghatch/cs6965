@@ -3,6 +3,8 @@
 (require racket/string)
 (require racket/set)
 
+(module+ test (require rackunit))
+
 (struct sudoku-board
   (M N rows)
   #:transparent)
@@ -41,7 +43,6 @@
             (set-sudoku-cell board x y (string->number v)))))))
 
 (module+ test
-  (require rackunit)
   (check-equal? (string->board "2 1\n1 _\n2 _")
                 (set-sudoku-cell (set-sudoku-cell (empty-sudoku-board 2 1) 0 1 2) 0 0 1)))
 
