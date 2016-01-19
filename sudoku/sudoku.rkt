@@ -25,21 +25,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (string->board s)
-  (define lines
-    (filter (λ (l) (not (null? l)))
-            (for/list ([line (string-split s "\n")])
-              (string-split line))))
-  ;; TODO - handle errors
-  (define m (string->number (caar lines)))
-  (define n (string->number (cadar lines)))
-  (define data (list->vector (map list->vector (cdr lines))))
-  (for*/fold ([board (empty-sudoku-board m n)])
-             ([x (in-range (* m n))]
-              [y (in-range (* m n))])
-    (let ((v (vector-ref (vector-ref data y) x)))
-      (if (equal? v "_")
-          board
-          (set-sudoku-cell board x y (string->number v))))))
+  (define parts (string-split s))
+  (define l (length parts))
+  (when (< l 3) (error "invalid board"))
+  (let ([m (string->number (car parts))]
+        [n (string->number (cadr parts))]
+        [elems (list->vector (cddr parts))])
+    (when (< (vector-length elems) (* m n)) (error "invalid board"))
+    (for*/fold ([board (empty-sudoku-board m n)])
+               ([x (in-range (* m n))]
+                [y (in-range (* m n))])
+      (let ([v (vector-ref elems (+ x (* m n y)))])
+        (if (or (equal? v "_") (equal? v "0"))
+            board
+            (set-sudoku-cell board x y (string->number v)))))))
 
 (module+ test
   (require rackunit)
