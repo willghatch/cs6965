@@ -24,7 +24,8 @@
     )
   )
 
-;(no-web-browser)
 (serve/servlet serve-sudoku
-               #:servlet-regexp #rx""
+               #:servlet-regexp #rx".*\\.txt"
+               #:port 8080
+               #:launch-browser? #f
                )
