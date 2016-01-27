@@ -5,6 +5,8 @@
 
 (module+ test (require rackunit))
 
+(provide (all-defined-out))
+
 (struct sudoku-board
   (M N rows)
   #:transparent)
