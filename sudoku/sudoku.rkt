@@ -2,6 +2,7 @@
 
 (require racket/string)
 (require racket/set)
+(require racket/math)
 
 (module+ test (require rackunit))
 
@@ -212,6 +213,34 @@ EOB
                 (set 1 2 3 4)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define (solve-rec/sort b n-max solutions-so-far)
+  (if (>= (set-count solutions-so-far) n-max)
+      solutions-so-far
+      (let* ([m (sudoku-board-M b)]
+             [n (sudoku-board-N b)]
+             [mn (* m n)]
+             [coords (for*/list ([x (in-range mn)]
+                                 [y (in-range mn)])
+                       (cons x y))])
+        (let-values ([(mincoord npossible)
+                      (for/fold ([mincoord (cons 0 0)]
+                                 [minv +inf.0])
+                                ([c coords])
+                        (let ([v (if (number? (get-sudoku-cell b (car c) (cdr c)))
+                                     +inf.0
+                                     (set-count (get-cell-potential-values b (car c) (cdr c))))])
+                          (if (> minv v)
+                              (values c v)
+                              (values mincoord minv))))])
+          (if (infinite? npossible)
+              (set-add solutions-so-far b)
+              (for/fold ([solutions solutions-so-far])
+                        ([p (get-cell-potential-values b (car mincoord) (cdr mincoord))])
+                (solve-rec/sort (set-sudoku-cell b (car mincoord) (cdr mincoord) p)
+                                n-max
+                                solutions)))
+          ))))
+
 (define (solve-rec b x y n-max solutions-so-far)
   (let* ([m (sudoku-board-M b)]
          [n (sudoku-board-N b)]
@@ -231,7 +260,7 @@ EOB
 (define (solve board n-solutions)
   ;; returns a set of solutions
   (if (valid-board? board)
-      (solve-rec board 0 0 n-solutions (set))
+      (solve-rec/sort board n-solutions (set))
       (set)))
 (define (solve-unique board)
   (let ((s (solve board 2)))
