@@ -16,8 +16,8 @@
 (define (empty-sudoku-board m n)
   (let* ([mn (* m n)]
          [empty-row (for/hash ([i (in-range mn)])
-                      ;(values i (get-board-potential-values)))]
-                      (values i 'blank))]
+                      (values i (get-board-potential-values (sudoku-board m n #f))))]
+                      ;(values i 'blank))]
          [rows (for/hash ([i (in-range mn)])
                  (values i empty-row))])
     (sudoku-board m n rows)))
@@ -28,7 +28,7 @@
 (define (cell-lens x y) (lens-compose (board-to-cell-lens x y) board-rows-lens))
 (define (get-sudoku-cell board x y)
   (lens-view (cell-lens x y) board))
-(define (set-sudoku-cell board x y v)
+(define (set-sudoku-cell/no-update board x y v)
   (lens-set (cell-lens x y) board v))
 
 (define (get-m*n board)
@@ -62,6 +62,24 @@
   (get-cells board get-row-coordinates #f y))
 (define (get-column-cells board x)
   (get-cells board get-column-coordinates x #f))
+
+(define (update-potential-values board x y)
+  (define v (get-sudoku-cell board x y))
+  (define (xform setval)
+    (if (set? setval)
+        (set-remove setval v)
+        setval))
+  (if (set? v)
+      board
+      (for/fold ([b board])
+                ([c (append (get-row-coordinates board x y)
+                            (get-column-coordinates board x y)
+                            (get-peer-group-coordinates board x y))])
+        (lens-transform (cell-lens (car c) (cdr c)) b xform))))
+
+(define (set-sudoku-cell/update b x y v)
+  (update-potential-values (set-sudoku-cell/no-update b x y v) x y))
+(define set-sudoku-cell set-sudoku-cell/update)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -124,8 +142,8 @@
 (define (valid-group? g)
   ;; a group will be a list of m*n values
   (foldl (λ (v s) (cond [(not s) #f]
-                        ;[(set? v) s]
-                        [(equal? v 'blank) s]
+                        [(set? v) s]
+                        ;[(equal? v 'blank) s]
                         [(set-member? s v) #f]
                         [else (set-add s v)]))
          (set)
@@ -214,6 +232,9 @@ EOB
   (list->set (in-range 1 (add1 (* (sudoku-board-M b) (sudoku-board-N b))))))
 
 (define (get-cell-potential-values b x y)
+  (let ([v (get-sudoku-cell b x y)])
+    (if (set? v) v (set v))))
+(define (get-cell-potential-values/old b x y)
   (let ([rcs (get-row-cells b y)]
         [ccs (get-column-cells b x)]
         [pcs (get-peer-group-cells b x y)])
@@ -266,7 +287,8 @@ EOB
           [(>= x mn) (solve-rec b 0 (add1 y) n-max solutions-so-far)]
           [(>= y mn) (set-add solutions-so-far b)]
           [(number? cell) (solve-rec b (add1 x) y n-max solutions-so-far)]
-          [(equal? cell 'blank)
+          ;[(equal? cell 'blank)
+          [(set? cell)
            (for/fold ([solutions solutions-so-far])
                      ([p (get-cell-potential-values b x y)])
              (solve-rec (set-sudoku-cell b x y p) (add1 x) y n-max solutions))
