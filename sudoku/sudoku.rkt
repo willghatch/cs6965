@@ -77,8 +77,21 @@
                             (get-peer-group-coordinates board x y))])
         (lens-transform (cell-lens (car c) (cdr c)) b xform))))
 
+(define (un-set-single-values board)
+  ;; when I have a set of 1 possible value, lift it out of the set and re-update
+  (define (un-set-rec board x y)
+    (let ([mn (get-m*n board)])
+      (cond [(x . >= . mn) (un-set-rec board 0 (add1 y))]
+            [(y . >= . mn) board]
+            [else
+             (let ([v (get-sudoku-cell board x y)])
+               (if (and (set? v) (equal? (set-count v) 1))
+                   (set-sudoku-cell/update board x y (set-first v))
+                   (un-set-rec board (add1 x) y)))])))
+  (un-set-rec board 0 0))
+
 (define (set-sudoku-cell/update b x y v)
-  (update-potential-values (set-sudoku-cell/no-update b x y v) x y))
+  (un-set-single-values (update-potential-values (set-sudoku-cell/no-update b x y v) x y)))
 (define set-sudoku-cell set-sudoku-cell/update)
 
 
