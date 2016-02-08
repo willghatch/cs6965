@@ -3,6 +3,7 @@
 (require racket/string)
 (require racket/set)
 (require racket/math)
+(require lens)
 
 (module+ test (require rackunit))
 
@@ -15,17 +16,53 @@
 (define (empty-sudoku-board m n)
   (let* ([mn (* m n)]
          [empty-row (for/hash ([i (in-range mn)])
+                      ;(values i (get-board-potential-values)))]
                       (values i 'blank))]
          [rows (for/hash ([i (in-range mn)])
                  (values i empty-row))])
     (sudoku-board m n rows)))
 
-(define (set-sudoku-cell b x y val)
-  (let* ([rows (sudoku-board-rows b)]
-         [row (hash-ref rows y)]
-         [nrow (hash-set row x val)]
-         [nrows (hash-set rows y nrow)])
-    (struct-copy sudoku-board b [rows nrows])))
+(define board-rows-lens (make-lens sudoku-board-rows
+                                   (λ (b r) (struct-copy sudoku-board b [rows r]))))
+(define (board-to-cell-lens x y) (hash-ref-nested-lens y x))
+(define (cell-lens x y) (lens-compose (board-to-cell-lens x y) board-rows-lens))
+(define (get-sudoku-cell board x y)
+  (lens-view (cell-lens x y) board))
+(define (set-sudoku-cell board x y v)
+  (lens-set (cell-lens x y) board v))
+
+(define (get-m*n board)
+  (* (sudoku-board-M board) (sudoku-board-N board)))
+
+(define (get-row-coordinates board _ y)
+  (for/list ([x (in-range (get-m*n board))])
+    (cons x y)))
+(define (get-column-coordinates board x _)
+  (for/list ([y (in-range (get-m*n board))])
+    (cons x y)))
+(define (get-peer-group-coordinates board x y)
+  ;; m is the number of columns in a sub-board
+  ;; n is the number of rows in a sub-board
+  (let* ([m (sudoku-board-M board)]
+         [n (sudoku-board-N board)]
+         ;; start of peer group ranges
+         [px (* m (quotient x m))]
+         [py (* n (quotient y n))])
+    (for*/list ([cx (in-range px (+ px m))]
+                [cy (in-range py (+ py n))])
+      (cons cx cy))))
+
+(define (get-cells board coord-func x y)
+  (for/list ([coord (coord-func board x y)])
+    (get-sudoku-cell board (car coord) (cdr coord))))
+
+(define (get-peer-group-cells board x y)
+  (get-cells board get-peer-group-coordinates x y))
+(define (get-row-cells board y)
+  (get-cells board get-row-coordinates #f y))
+(define (get-column-cells board x)
+  (get-cells board get-column-coordinates x #f))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -81,36 +118,13 @@
          )))
      "\n")))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; projectors
-
-(define (get-sudoku-cell board x y)
-  (hash-ref (hash-ref (sudoku-board-rows board) y) x))
-
-(define (get-peer-group-cells board x y)
-  ;; m is the number of columns in a sub-board
-  ;; n is the number of rows in a sub-board
-  (let* ([m (sudoku-board-M board)]
-         [n (sudoku-board-N board)]
-         ;; start of peer group ranges
-         [px (* m (quotient x m))]
-         [py (* n (quotient y n))])
-    (for*/list ([cx (in-range px (+ px m))]
-                [cy (in-range py (+ py n))])
-      (get-sudoku-cell board cx cy))))
-
-(define (get-row-cells board y)
-  (hash-values (hash-ref (sudoku-board-rows board) y)))
-
-(define (get-column-cells board x)
-  (for/list ([y (in-range 0 (* (sudoku-board-N board)
-                               (sudoku-board-M board)))])
-    (get-sudoku-cell board x y)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; validators
 
 (define (valid-group? g)
   ;; a group will be a list of m*n values
   (foldl (λ (v s) (cond [(not s) #f]
+                        ;[(set? v) s]
                         [(equal? v 'blank) s]
                         [(set-member? s v) #f]
                         [else (set-add s v)]))
