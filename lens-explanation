@@ -1,0 +1,81 @@
+
+
+~~~~~~~~~~~~~~~~~~~~ LENSES ~~~~~~~~~~~~~~~~~~~~
+
+Make a lens like so:
+(make-lens <getter> <setter>)
+
+For instance:
+
+(define car-lens car set-car)
+(define second-lens second (λ (l v) (cons (first l) (cons v (rest (rest l))))))
+
+The getters must take one argument -- the value to get something out of.
+The setters must take two arguments -- first the container, second the new value.
+
+
+To use:
+
+(lens-view car-lens (list 1 2 3)) ---> 1
+(lens-set car-lens (list 1 2 3) 953.6) ---> (list 953.6 2 3)
+
+So at this basic level, they are just like using the getters and setters, but more cumbersome.
+
+eg:
+(car (list 1 2 3)) ---> 1
+(set-car (list 1 2 3) 953.6) ---> (list 953.6 2 3)
+
+
+The power of lenses is that they can be composed for nested data structures.
+
+(define cadaddar-lens (lens-compose car-lens cdr-lens car-lens cdr-lens cdr-lens car-lens))
+(define list-tree '((1 ((2 3 (4 5 6) 7) (8 9)) 10) 11 (1 2 3)))
+(lens-view cadaddar-lens list-tree) ---> 4
+(lens-set cadaddar-lens list-tree 'hello) ---> '((1 ((2 3 (hello 5 6) 7) (8 9)) 10) 11 (1 2 3))
+(lens-transform cadaddar-lens list-tree (λ (x) (* x 100))) ---> '((1 ((2 3 (400 5 6) 7) (8 9)) 10) 11 (1 2 3))
+
+Or perhaps:
+
+(define player (hash 'health 117
+                     'equipment (hash 'wielding (hash 'name "sword of illegitimate genealogy"
+                                                      'dice "3d6"
+                                                      'slays (list "dragons"))
+                                      'head (hash 'name "helm of AC -1"
+                                                  'ac -1))
+                     'name "Val Kilmer"
+                     'class "swordsman"
+                     'susceptible "Dust of Broken Heart"))
+
+
+(define (hash-ref-lens key)
+  (make-lens (λ (h) (hash-ref h key))
+             (λ (h v) (hash-set h key v))))
+
+(define helm-ac-lens (lens-compose (hash-ref-lens 'ac) (hash-ref-lens 'head) (hash-ref-lens 'equipment)))
+or
+(define helm-ac-lens (hash-ref-nested-lens 'equipment 'head 'ac))
+
+(lens-view helm-ac-lens player) ---> -1
+(lens-set helm-ac-lens player -3) ---> player's helm now has ac -3
+
+
+If we didn't have lens composition, we would have to do it more like this:
+
+(hash-set player
+          'equipment
+          (hash-set (hash-ref player 'equipment)
+                    'head
+                    (hash-set (hash-ref 'head (hash-ref player 'equipment))
+                              'ac
+                              -3)))
+
+
+So it lets us do things more like we are used to in procedural languages, eg:
+
+player.equipment.head.ac = -3
+
+Except with functional updates.
+
+So they are basically first-class functional l-values.
+
+
