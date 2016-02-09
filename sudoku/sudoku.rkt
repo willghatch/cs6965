@@ -89,9 +89,11 @@
                    (set-sudoku-cell/update board x y (set-first v))
                    (un-set-rec board (add1 x) y)))])))
   (un-set-rec board 0 0))
+(define (post-set-update board x y)
+  (un-set-single-values (update-potential-values board x y)))
 
 (define (set-sudoku-cell/update b x y v)
-  (un-set-single-values (update-potential-values (set-sudoku-cell/no-update b x y v) x y)))
+  (post-set-update (set-sudoku-cell/no-update b x y v) x y))
 (define set-sudoku-cell set-sudoku-cell/update)
 
 
@@ -358,7 +360,7 @@ EOB
 
 (define (generate-board m n [fuel 500])
   (define mn (* m n))
-  (define (rec b fuel)
+  (define (rec b b/no-update fuel)
     (if (< fuel 0)
         #f
         (let* ([x (random mn)]
@@ -368,22 +370,24 @@ EOB
                       ;; if nothing is possible, just choose 1 and it will later show its invalid, and use a fuel
                       1
                       (list-ref (set->list v-possible) (random (set-count v-possible))))]
+               [nb/no-update (set-sudoku-cell/no-update b/no-update x y v)]
                [nb (set-sudoku-cell b x y v)]
                [valid? (valid-board? nb)]
                [solution (and valid? (solve-unique nb))])
           (cond
             ;; if there is a unique solution, use the current board
-            [(sudoku-board? solution) nb]
+            [(sudoku-board? solution) nb/no-update]
             ;; if there is no solution, try going forward with the last good board
-            [(not solution) (rec b (- fuel 1))]
+            [(not solution) (rec b b/no-update (- fuel 1))]
             ;; there are multiple solutions still, so let's prune some more
-            [else (rec nb fuel)]))))
+            [else (rec nb nb/no-update fuel)]))))
 
-  (or (rec (empty-sudoku-board m n) fuel)
+  (or (let ([b (empty-sudoku-board m n)])
+        (rec b b fuel))
       (generate-board m n fuel)))
 
 (module+ main
   (let ([b (generate-board 3 3)])
     (printf "~a~n" (board->string b))
-    (printf "~a~n" (board->string (solve-unique b)))
+    (printf "~a~n" (board->string (solve-unique (string->board (board->string b)))))
     ))
