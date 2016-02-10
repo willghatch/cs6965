@@ -11,7 +11,12 @@ For instance:
 (define second-lens second (λ (l v) (cons (first l) (cons v (rest (rest l))))))
 
 The getters must take one argument -- the value to get something out of.
+
+eg. (car my-list) or (my-struct-element foo)
+
 The setters must take two arguments -- first the container, second the new value.
+
+eg. (set-car my-list 5) or (set-my-struct-element foo 'bar)
 
 
 To use:
@@ -44,7 +49,7 @@ Or perhaps:
                                                   'ac -1))
                      'name "Val Kilmer"
                      'class "swordsman"
-                     'susceptible "Dust of Broken Heart"))
+                     'susceptible (list "Dust of Broken Heart")))
 
 
 (define (hash-ref-lens key)
