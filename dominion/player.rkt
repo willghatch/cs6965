@@ -6,6 +6,8 @@
 (require "gamestate.rkt")
 (require racket/list)
 (require racket/match)
+(require (for-syntax racket/base))
+(require (for-syntax racket/syntax))
 
 (define (play-loop)
   (let ([message (read)])
@@ -20,56 +22,66 @@
   (printf "~a~n" (decide-play state))
   (flush-output))
 
-;; I don't remember offhand how to introduce these things non-hygienically...
-(define-syntax-rule (define/state (name state)
-                      body ...)
-  (define (name state)
-    (let ([players (gamestate-players state)]
-          [supply (gamestate-supply state)]
-          [actions (gamestate-actions state)]
-          [buys (gamestate-buys state)]
-          [coins (gamestate-coins state)]
-          [deck (gamestate-deck state)]
-          [hand (gamestate-hand state)])
-      body ...)))
+;; non-hygienically introduce identifiers for the parts of state
+(define-syntax (define/state stx)
+  (syntax-case stx ()
+    [(d (name state) body ...)
+     (with-syntax ([players (datum->syntax #'d 'players)]
+                   [supply (datum->syntax #'d 'supply)]
+                   [actions (datum->syntax #'d 'actions)]
+                   [buys (datum->syntax #'d 'buys)]
+                   [coins (datum->syntax #'d 'coins)]
+                   [deck (datum->syntax #'d 'deck)]
+                   [hand (datum->syntax #'d 'hand)]
+                   )
+       #'(define (name state)
+           (let ([players (gamestate-players state)]
+                 [supply (gamestate-supply state)]
+                 [actions (gamestate-actions state)]
+                 [buys (gamestate-buys state)]
+                 [coins (gamestate-coins state)]
+                 [deck (gamestate-deck state)]
+                 [hand (gamestate-hand state)])
+             body ...)))]
+    [else (raise-syntax-error "define/state - bad syntax")]))
 
-(define (decide-play state)
+(define/state (decide-play state)
   (cond
-    [(and (< 0 (gamestate-actions state))
-          (member mine (gamestate-hand state)))
+    [(and (< 0 actions)
+          (member mine hand))
      (decide-action state)]
-    [(member gold (gamestate-hand state))
+    [(member gold hand)
      '(add gold)]
-    [(member silver (gamestate-hand state))
+    [(member silver hand)
      '(add silver)]
-    [(member copper (gamestate-hand state))
+    [(member copper hand)
      '(add copper)]
-    [(< 0 (gamestate-buys state))
+    [(< 0 buys)
      (decide-buy state)]
-    [(empty? (gamestate-hand state))
+    [(empty? hand)
      '(clean)]
     [else
      `(clean ,(card-name (first  (gamestate-hand state))))]
     ))
 
-(define (decide-action state)
+(define/state (decide-action state)
   (cond
-    [(member mine (gamestate-hand state))
+    [(member mine hand)
      (cond
-       [(and (member copper (gamestate-hand state))
-             (member silver (gamestate-supply state)))
+       [(and (member copper hand)
+             (member silver supply))
         (list 'act 'mine 'copper 'silver)]
-       [(and (member silver (gamestate-hand state))
-             (member gold (gamestate-supply state)))
+       [(and (member silver hand)
+             (member gold supply))
         (list 'act 'mine 'silver 'gold)]
        [else '(clean mine)])]
-    [else `(clean ,(first (gamestate-hand state)))]
+    [else `(clean ,(first hand))]
     ))
 
-(define (decide-buy state)
-  (let* ([availables (filter (λ (c) (>= (gamestate-coins state)
+(define/state (decide-buy state)
+  (let* ([availables (filter (λ (c) (>= coins
                                         (card-cost c)))
-                             (gamestate-supply state))]
+                             supply)]
          [expensive-est (first (reverse
                                 (sort availables
                                       <
