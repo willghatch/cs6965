@@ -8,6 +8,8 @@
 (require lens)
 (require racket/list)
 
+(provide (all-defined-out))
+
 ;play	 	=	 	(act mine treasure treasure)
 ; 	 	|	 	(add treasure) ; adds coins
 ; 	 	|	 	(buy card)
@@ -164,5 +166,6 @@
 
   (check-equal? test-state (state->sexp (parse-state test-state)))
 
-  
   )
+
+
