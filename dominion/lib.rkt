@@ -2,7 +2,11 @@
 
 (require "card.rkt")
 (require "cards.rkt")
+(require "gamestate.rkt")
 (require racket/match)
+(require threading)
+(require lens)
+(require racket/list)
 
 ;play	 	=	 	(act mine treasure treasure)
 ; 	 	|	 	(add treasure) ; adds coins
@@ -13,7 +17,7 @@
 (define (valid-play? state play)
   (with-handlers ([(λ _ #t) (λ _ #f)])
     (match play
-      [(list 'act action . rest)
+      [(list 'act action rest ...)
        (and
         (< 0 (gamestate-actions state))
         (member (card-ref action) (gamestate-hand state))
@@ -34,17 +38,17 @@
 
 (define (do-play state play)
   (match play
-    [(list 'act action . rest)
+    [(list 'act action rest ...)
      (apply (card-action (card-ref action))
             (cons (~> state
-                      (plays-from-hand _ (card-ref action))
+                      (play-from-hand _ (card-ref action))
                       (lens-transform gamestate-actions-lens
                                       _
                                       sub1))
                   rest))]
     [(list 'add treasure)
      (~> state
-         (plays-from-hand _ (card-ref treasure))
+         (play-from-hand _ (card-ref treasure))
          (lens-transform gamestate-coins-lens
                          _
                          (λ (c) (+ c (card-coin-value (card-ref treasure))))))]
@@ -79,3 +83,86 @@
 ;; TODO test who won
 
 ;;; TODO - take turns, serialize/deserialize, server, AI
+
+
+(define (parse-state state-sexp)
+  (gamestate
+   (rest (first state-sexp))
+   (map card-ref (rest (second state-sexp)))
+   (map card-ref (rest (third state-sexp)))
+
+   (second (fourth state-sexp))
+   (second (fifth state-sexp))
+   (second (sixth state-sexp))
+
+   (map card-ref (rest (seventh state-sexp)))
+   (map card-ref (rest (eighth state-sexp)))
+   (map card-ref (rest (ninth state-sexp)))
+   (map card-ref (rest (tenth state-sexp)))
+   ))
+
+#;(define (parse-state state-sexp)
+  (match
+      [(list (list 'players names ...)
+             (list 'supply supply ...)
+             (list 'trash trash ...)
+
+             (list 'actions actions)
+             (list 'buys buys)
+             (list 'coins coins)
+
+             (list 'deck deck ...)
+             (list 'hand hand ...)
+             (list 'plays plays ...)
+             (list 'discards discards ...))
+       (gamestate names
+                  (map card-ref supply)
+                  (map card-ref trash)
+
+                  actions
+                  buys
+                  coins
+
+                  (map card-ref deck)
+                  (map card-ref hand)
+                  (map card-ref plays)
+                  (map card-ref discards))]))
+
+(define (state->sexp state)
+  (list
+   (cons 'players (gamestate-players state))
+   (cons 'supply (map card-name (gamestate-supply state)))
+   (cons 'trash (map card-name (gamestate-trash state)))
+
+   (list 'actions (gamestate-actions state))
+   (list 'buys (gamestate-buys state))
+   (list 'coins (gamestate-coins state))
+
+   (cons 'deck (map card-name (gamestate-deck state)))
+   (cons 'hand (map card-name (gamestate-hand state)))
+   (cons 'plays (map card-name (gamestate-plays state)))
+   (cons 'discards (map card-name (gamestate-discards state)))
+   ))
+
+
+(module+ test
+
+  (require rackunit)
+
+  (define test-state
+    '((players "bob" "sally")
+      (supply gold gold silver copper mine mine duchy province estate)
+      (trash gold gold silver copper mine mine duchy province estate)
+      (actions 2)
+      (buys 3)
+      (coins 7)
+      (deck gold gold silver copper mine mine duchy province estate)
+      (hand gold gold silver copper mine mine duchy province estate)
+      (plays gold gold silver copper mine mine duchy province estate)
+      (discards gold gold silver copper mine mine duchy province estate)
+      ))
+
+  (check-equal? test-state (state->sexp (parse-state test-state)))
+
+  
+  )

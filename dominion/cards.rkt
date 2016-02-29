@@ -3,6 +3,8 @@
 (require "card.rkt")
 (require "gamestate.rkt")
 (require racket/match)
+(require threading)
+(require lens)
 
 (provide (all-defined-out))
 

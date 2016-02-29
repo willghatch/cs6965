@@ -35,6 +35,7 @@
 ; (plays card ...)
 ; (discards card ...))
 
+
 (define-syntax-rule (define-card-mover name from-lens to-lens)
   (define (name state card)
     (~> state

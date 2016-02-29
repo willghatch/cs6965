@@ -20,7 +20,7 @@
                  #:coin-value [coin-value 0]
                  #:victory-points [victory-points 0]
                  #:action [action #f]
-                 #:action-validator [actionvalidator #f]
+                 #:action-validator [action-validator #f]
                  #:treasure? [treasure? #f])
   (card name
         cost
