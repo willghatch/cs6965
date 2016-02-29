@@ -26,23 +26,15 @@
 (define-syntax (define/state stx)
   (syntax-case stx ()
     [(d (name state) body ...)
-     (with-syntax ([players (datum->syntax #'d 'players)]
-                   [supply (datum->syntax #'d 'supply)]
-                   [actions (datum->syntax #'d 'actions)]
-                   [buys (datum->syntax #'d 'buys)]
-                   [coins (datum->syntax #'d 'coins)]
-                   [deck (datum->syntax #'d 'deck)]
-                   [hand (datum->syntax #'d 'hand)]
-                   )
-       #'(define (name state)
-           (let ([players (gamestate-players state)]
-                 [supply (gamestate-supply state)]
-                 [actions (gamestate-actions state)]
-                 [buys (gamestate-buys state)]
-                 [coins (gamestate-coins state)]
-                 [deck (gamestate-deck state)]
-                 [hand (gamestate-hand state)])
-             body ...)))]
+     #`(define (name state)
+         (let ([#,(datum->syntax #'d 'players) (gamestate-players state)]
+               [#,(datum->syntax #'d 'supply) (gamestate-supply state)]
+               [#,(datum->syntax #'d 'actions) (gamestate-actions state)]
+               [#,(datum->syntax #'d 'buys) (gamestate-buys state)]
+               [#,(datum->syntax #'d 'coins) (gamestate-coins state)]
+               [#,(datum->syntax #'d 'deck) (gamestate-deck state)]
+               [#,(datum->syntax #'d 'hand) (gamestate-hand state)])
+           body ...))]
     [else (raise-syntax-error "define/state - bad syntax")]))
 
 (define/state (decide-play state)
