@@ -40,7 +40,9 @@
 (define/state (decide-play state)
   (cond
     [(and (< 0 actions)
-          (member mine hand))
+          (member mine hand)
+          (or (member copper hand)
+              (member silver hand)))
      (decide-action state)]
     [(member gold hand)
      '(add gold)]
