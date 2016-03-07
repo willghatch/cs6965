@@ -30,6 +30,9 @@
 (defcard province
   #:cost 8
   #:victory-points 6)
+(defcard curse
+  #:cost 0
+  #:victory-points -1)
 
 (defcard mine
   #:cost 5
@@ -66,6 +69,71 @@
          [else #f]))))
   )
 
+(defcard cellar
+  #:cost 2
+  #:action
+  (λ (state . cards)
+    (error "not yet implemented"))
+  #:action-validator
+  (λ (state act-form)
+    #f)
+  )
+(defcard market
+  #:cost 5
+  #:action
+  (λ (state)
+    (error "not yet implemented"))
+  #:action-validator
+  (λ (state act-form)
+    #f)
+  )
+(defcard remodel
+  #:cost 4
+  #:action
+  (λ (state from to)
+    (error "not yet implemented"))
+  #:action-validator
+  (λ (state act-form)
+    #f)
+  )
+(defcard smithy
+  #:cost 4
+  #:action
+  (λ (state)
+    (error "not yet implemented"))
+  #:action-validator
+  (λ (state act-form)
+    #f)
+  )
+(defcard village
+  #:cost 3
+  #:action
+  (λ (state)
+    (error "not yet implemented"))
+  #:action-validator
+  (λ (state act-form)
+    #f)
+  )
+(defcard woodcutter
+  #:cost 3
+  #:action
+  (λ (state)
+    (error "not yet implemented"))
+  #:action-validator
+  (λ (state act-form)
+    #f)
+  )
+(defcard workshop
+  #:cost 3
+  #:action
+  (λ (state gained)
+    (error "not yet implemented"))
+  #:action-validator
+  (λ (state act-form)
+    #f)
+  )
+
+
 
 (define card-hash
   (hash
@@ -76,6 +144,13 @@
    'duchy duchy
    'province province
    'mine mine
+   'cellar cellar
+   'market market
+   'remodel remodel
+   'smithy smithy
+   'village village
+   'woodcutter woodcutter
+   'workshop workshop
    ))
 
 (define (card-ref name)
