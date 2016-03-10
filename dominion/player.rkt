@@ -13,10 +13,11 @@
   (let ([message (read)])
     (match message
       [(list moved name play) (void)]
+      [(list attacked attack-form name state)
+       (do-defend state attack-form)]
       [(list move state)
        (do-play (parse-state state))]))
   (play-loop))
-
 
 (define (do-play state)
   (printf "~a~n" (decide-play state))
@@ -81,6 +82,12 @@
         '(act mine silver gold))
    (and (member smithy hand)
         '(act smithy))
+   (and (member militia hand)
+        '(act militia))
+   (and (member witch hand)
+        '(act witch))
+   (and (member moat hand)
+        '(act moat))
    (and (member woodcutter hand)
         '(act woodcutter))
    (and (member workshop hand)
@@ -118,6 +125,35 @@
         `(buy ,(card-name (blingest/budget state coins)))
         #f)))
 
+
+(define (do-defend state attack-form)
+  (printf "~a~n" (decide-defend state attack-form))
+  (flush-output))
+(define/state (decide-defend state attack-form)
+  (or
+   (and (member moat hand) '(moat))
+   (match attack-form
+     ['(act militia)
+      (decide-discard state (- (length hand) 3))]
+     [else #f])))
+
+(define/state (decide-discard state n-discards)
+  (define (decide-discard-1 hand-left)
+    (or
+     (and (member estate hand-left) 'estate)
+     (and (member duchy hand-left) 'duchy)
+     (and (member province hand-left) 'province)
+     (and (member curse hand-left) 'curse)
+     (and (member copper hand-left) 'copper)
+     (first (shuffle hand-left))))
+  (define (rec discards)
+    (if (equal? (length discards) n-discards)
+        discards
+        (cons (decide-discard-1 (foldl (λ (card hand) (remove card hand))
+                                       hand
+                                       discards)))))
+  `(discard ,@(rec empty))
+  )
 
 
 (module+ main

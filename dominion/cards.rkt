@@ -132,6 +132,33 @@
   (λ (state act-form)
     #f)
   )
+(defcard militia
+  #:cost 4
+  #:action
+  (λ (state)
+    (error "not yet implemented"))
+  #:action-validator
+  (λ (state act-form)
+    #f)
+  )
+(defcard witch
+  #:cost 5
+  #:action
+  (λ (state)
+    (error "not yet implemented"))
+  #:action-validator
+  (λ (state act-form)
+    #f)
+  )
+(defcard moat
+  #:cost 2
+  #:action
+  (λ (state)
+    (error "not yet implemented"))
+  #:action-validator
+  (λ (state act-form)
+    #f)
+  )
 
 
 
