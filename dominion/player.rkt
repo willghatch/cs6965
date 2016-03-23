@@ -139,7 +139,6 @@
 
 (define/state (decide-discard state n-discards)
   (define (decide-discard-1 hand-left)
-    (eprintf "hand left: ~a~n" (map card-name hand-left))
     (or
      (and (member estate hand-left) estate)
      (and (member duchy hand-left) duchy)
@@ -148,7 +147,6 @@
      (and (member copper hand-left) copper)
      (first (shuffle hand-left))))
   (define (rec discards hand-left)
-    (eprintf "hand-left: ~a, discards: ~a~n" (map card-name hand-left) discards)
     (if (equal? (length discards) n-discards)
         discards
         (let ([new-discard (decide-discard-1 hand-left)])
