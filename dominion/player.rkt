@@ -112,17 +112,18 @@
           (supply-available-for state max-cost)))
 (define (expensive-est-sort cards)
   (reverse (sort cards < #:key card-cost #:cache-keys? #t)))
-(define/state (blingest/budget state budget)
+(define/state (blingest/budget state budget [filterf (λ _ #t)])
   (let ([bling (expensive-est-sort
-                (shuffle (supply-available-for/no-crap state budget)))])
+                (shuffle (filter filterf
+                                 (supply-available-for/no-crap state budget))))])
     (if (empty? bling)
         #f
         (first bling))))
 
-(define/state (decide-buy state)
-  (let ([bling (blingest/budget state coins)])
+(define/state (decide-buy state [filter (λ _ #t)])
+  (let ([bling (blingest/budget state coins filter)])
     (if bling
-        `(buy ,(card-name (blingest/budget state coins)))
+        `(buy ,(card-name bling))
         #f)))
 
 
