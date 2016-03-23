@@ -170,6 +170,7 @@
    'estate estate
    'duchy duchy
    'province province
+   'curse curse
    'mine mine
    'cellar cellar
    'market market
@@ -178,6 +179,9 @@
    'village village
    'woodcutter woodcutter
    'workshop workshop
+   'militia militia
+   'moat moat
+   'witch witch
    ))
 
 (define (card-ref name)
