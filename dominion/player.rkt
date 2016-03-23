@@ -152,8 +152,7 @@
         (let ([new-discard (decide-discard-1 hand-left)])
           (rec (cons new-discard discards)
                (remove new-discard hand-left)))))
-  `(discard ,@(map card-name (rec empty hand)))
-  )
+  `(discard ,@(map card-name (rec empty hand))))
 
 
 (module+ main
