@@ -9,6 +9,20 @@
 (require (for-syntax racket/base))
 (require (for-syntax racket/syntax))
 
+(provide (all-defined-out))
+
+(define (any-card-filter card) #t)
+(define (v1-filter card)
+  (member (card-name card)
+          '(copper silver gold
+                   province duchy estate
+                   mine)))
+(define (v2-filter card)
+  (or (v1-filter card)
+      (member (card-name card)
+              '(cellar market remodel smithy village woodcutter workshop))))
+(define current-buy-filter (make-parameter any-card-filter))
+
 (define (play-loop)
   (let ([message (read)])
     (match message
@@ -112,16 +126,16 @@
           (supply-available-for state max-cost)))
 (define (expensive-est-sort cards)
   (reverse (sort cards < #:key card-cost #:cache-keys? #t)))
-(define/state (blingest/budget state budget [filterf (λ _ #t)])
+(define/state (blingest/budget state budget)
   (let ([bling (expensive-est-sort
-                (shuffle (filter filterf
+                (shuffle (filter (current-buy-filter)
                                  (supply-available-for/no-crap state budget))))])
     (if (empty? bling)
         #f
         (first bling))))
 
-(define/state (decide-buy state [filter (λ _ #t)])
-  (let ([bling (blingest/budget state coins filter)])
+(define/state (decide-buy state)
+  (let ([bling (blingest/budget state coins)])
     (if bling
         `(buy ,(card-name bling))
         #f)))
