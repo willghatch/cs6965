@@ -14,7 +14,7 @@
     (match message
       [(list moved name play) (void)]
       [(list attacked attack-form name state)
-       (do-defend state attack-form)]
+       (do-defend (parse-state state) attack-form)]
       [(list move state)
        (do-play (parse-state state))]))
   (play-loop))
@@ -139,20 +139,22 @@
 
 (define/state (decide-discard state n-discards)
   (define (decide-discard-1 hand-left)
+    (eprintf "hand left: ~a~n" (map card-name hand-left))
     (or
-     (and (member estate hand-left) 'estate)
-     (and (member duchy hand-left) 'duchy)
-     (and (member province hand-left) 'province)
-     (and (member curse hand-left) 'curse)
-     (and (member copper hand-left) 'copper)
+     (and (member estate hand-left) estate)
+     (and (member duchy hand-left) duchy)
+     (and (member province hand-left) province)
+     (and (member curse hand-left) curse)
+     (and (member copper hand-left) copper)
      (first (shuffle hand-left))))
-  (define (rec discards)
+  (define (rec discards hand-left)
+    (eprintf "hand-left: ~a, discards: ~a~n" (map card-name hand-left) discards)
     (if (equal? (length discards) n-discards)
         discards
-        (cons (decide-discard-1 (foldl (λ (card hand) (remove card hand))
-                                       hand
-                                       discards)))))
-  `(discard ,@(rec empty))
+        (let ([new-discard (decide-discard-1 hand-left)])
+          (rec (cons new-discard discards)
+               (remove new-discard hand-left)))))
+  `(discard ,@(map card-name (rec empty hand)))
   )
 
 
